@@ -29,6 +29,11 @@
           <span id="questionType">加载中</span>
           <span id="categoryName">题库导入</span>
         </div>
+        <nav class="mode-nav" aria-label="题库菜单">
+          <button id="resumeButton" class="mode-button active" type="button">答题</button>
+          <button id="wrongBankButton" class="mode-button" type="button">错题库</button>
+          <button id="archiveButton" class="mode-button" type="button">归档</button>
+        </nav>
         <div class="progress-track" aria-hidden="true">
           <div id="progressFill" class="progress-fill"></div>
         </div>
@@ -60,6 +65,20 @@
           <h3>错题回顾</h3>
           <div id="mistakesList" class="mistakes-list"></div>
         </section>
+      </section>
+
+      <section id="libraryScreen" class="screen library-screen" hidden>
+        <article class="library-panel">
+          <div class="library-head">
+            <div>
+              <p id="libraryLabel" class="label">题库</p>
+              <h2 id="libraryTitle">错题库</h2>
+            </div>
+            <button id="continueButton" class="secondary-action" type="button">继续答题</button>
+          </div>
+          <p id="librarySummary" class="library-summary"></p>
+          <div id="libraryList" class="library-list"></div>
+        </article>
       </section>
     </main>
 

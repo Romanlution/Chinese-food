@@ -128,6 +128,30 @@ h1 {
   font-size: 13px;
 }
 
+.mode-nav {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.mode-button,
+.secondary-action {
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--muted);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.mode-button.active {
+  border-color: rgba(155, 61, 47, 0.45);
+  background: #f6e8dd;
+  color: var(--accent-dark);
+}
+
 .progress-track {
   height: 6px;
   margin-top: 12px;
@@ -154,7 +178,9 @@ h1 {
 
 .question-panel,
 .result-summary,
-.mistake-item {
+.mistake-item,
+.library-panel,
+.library-item {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--surface-strong);
@@ -318,6 +344,53 @@ h1 {
 
 .result-actions {
   margin-bottom: 20px;
+}
+
+.library-panel {
+  padding: 18px 16px;
+}
+
+.library-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.library-head h2 {
+  margin: 2px 0 0;
+  color: var(--ink);
+  font-size: 24px;
+  line-height: 1.2;
+}
+
+.secondary-action {
+  flex: 0 0 auto;
+  padding: 0 12px;
+}
+
+.library-summary {
+  margin: 0 0 14px;
+  color: var(--muted);
+}
+
+.library-list {
+  display: grid;
+  gap: 10px;
+}
+
+.library-item {
+  padding: 14px;
+  box-shadow: none;
+}
+
+.library-item p {
+  margin: 0 0 8px;
+}
+
+.library-item p:last-child {
+  margin-bottom: 0;
 }
 
 .mistakes-section h3 {

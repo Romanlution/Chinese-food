@@ -4,6 +4,7 @@ const BLANK_RE = /[（(]\s*[）)]/g;
 const analysisCache = new WeakMap();
 const WRONG_BANK_KEY = "miandian_wrong_bank_v1";
 const ARCHIVE_KEY = "miandian_archive_v1";
+const SESSION_KEY = "miandian_exam_session_v1";
 
 const els = {
   questionCounter: document.querySelector("#questionCounter"),
@@ -23,6 +24,15 @@ const els = {
   resultRate: document.querySelector("#resultRate"),
   restartButton: document.querySelector("#restartButton"),
   mistakesList: document.querySelector("#mistakesList"),
+  libraryScreen: document.querySelector("#libraryScreen"),
+  libraryLabel: document.querySelector("#libraryLabel"),
+  libraryTitle: document.querySelector("#libraryTitle"),
+  librarySummary: document.querySelector("#librarySummary"),
+  libraryList: document.querySelector("#libraryList"),
+  resumeButton: document.querySelector("#resumeButton"),
+  wrongBankButton: document.querySelector("#wrongBankButton"),
+  archiveButton: document.querySelector("#archiveButton"),
+  continueButton: document.querySelector("#continueButton"),
 };
 
 const state = {
@@ -35,6 +45,8 @@ const state = {
   answers: [],
   wrongBank: {},
   archive: {},
+  completed: false,
+  activeScreen: "quiz",
 };
 
 function shuffle(items) {
@@ -62,6 +74,60 @@ function loadStoredMap(key) {
 function saveProgress() {
   localStorage.setItem(WRONG_BANK_KEY, JSON.stringify(state.wrongBank));
   localStorage.setItem(ARCHIVE_KEY, JSON.stringify(state.archive));
+}
+
+function saveExamSession() {
+  if (state.exam.length !== EXAM_SIZE) {
+    return;
+  }
+
+  localStorage.setItem(SESSION_KEY, JSON.stringify({
+    version: 1,
+    savedAt: new Date().toISOString(),
+    exam: state.exam,
+    currentIndex: state.currentIndex,
+    score: state.score,
+    answered: state.answered,
+    selectedAnswer: state.selectedAnswer,
+    answers: state.answers,
+    completed: state.completed,
+  }));
+}
+
+function clearExamSession() {
+  localStorage.removeItem(SESSION_KEY);
+}
+
+function loadExamSession() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(SESSION_KEY) || "null");
+    if (!parsed || parsed.version !== 1 || !Array.isArray(parsed.exam)) {
+      return null;
+    }
+    if (parsed.exam.length !== EXAM_SIZE || !Number.isInteger(parsed.currentIndex)) {
+      return null;
+    }
+    if (parsed.currentIndex < 0 || parsed.currentIndex >= EXAM_SIZE) {
+      return null;
+    }
+    const bankIds = new Set(state.bank.map((question) => question.id));
+    if (!parsed.exam.every((question) => bankIds.has(question.id) && Array.isArray(question.options))) {
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function restoreExamSession(session) {
+  state.exam = session.exam;
+  state.currentIndex = session.currentIndex;
+  state.score = Number(session.score) || 0;
+  state.answered = Boolean(session.answered);
+  state.selectedAnswer = session.selectedAnswer ?? null;
+  state.answers = Array.isArray(session.answers) ? session.answers : [];
+  state.completed = Boolean(session.completed);
 }
 
 function getProgressCounts() {
@@ -672,21 +738,67 @@ function createExam() {
 }
 
 function setScreen(screen) {
+  state.activeScreen = screen;
+  const showQuiz = screen === "quiz";
   const showResult = screen === "result";
-  els.quizScreen.hidden = showResult;
+  const showLibrary = screen === "library";
+
+  els.quizScreen.hidden = !showQuiz;
   els.resultScreen.hidden = !showResult;
-  els.quizScreen.classList.toggle("active", !showResult);
+  els.libraryScreen.hidden = !showLibrary;
+  els.quizScreen.classList.toggle("active", showQuiz);
   els.resultScreen.classList.toggle("active", showResult);
+  els.libraryScreen.classList.toggle("active", showLibrary);
+
+  els.resumeButton.classList.toggle("active", showQuiz || showResult);
+  els.wrongBankButton.classList.toggle("active", showLibrary && els.libraryScreen.dataset.mode === "wrong");
+  els.archiveButton.classList.toggle("active", showLibrary && els.libraryScreen.dataset.mode === "archive");
 }
 
-function renderCurrentQuestion() {
+function findCurrentAnswerRecord() {
+  const question = state.exam[state.currentIndex];
+  return [...state.answers].reverse().find((answer) =>
+    answer.id === question.id &&
+    (answer.examIndex === undefined || answer.examIndex === state.currentIndex)
+  );
+}
+
+function applyAnswerFeedback(question, selectedAnswer, isCorrect, progressMessage = "") {
+  const buttons = [...els.optionsList.querySelectorAll(".option-button")];
+
+  buttons.forEach((button) => {
+    button.disabled = true;
+    button.classList.toggle("selected", normalizeAnswer(button.dataset.value) === normalizeAnswer(selectedAnswer));
+    if (normalizeAnswer(button.dataset.value) === normalizeAnswer(question.correctAnswer)) {
+      button.classList.add("correct");
+    }
+  });
+
+  if (!isCorrect) {
+    const selectedButton = buttons.find((button) => normalizeAnswer(button.dataset.value) === normalizeAnswer(selectedAnswer));
+    selectedButton?.classList.add("wrong");
+  }
+
+  els.feedback.hidden = false;
+  els.feedback.classList.add(isCorrect ? "correct" : "wrong");
+  els.feedback.textContent = [
+    isCorrect ? `回答正确。正确答案：${question.correctAnswer}` : `回答错误。正确答案：${question.correctAnswer}`,
+    progressMessage,
+  ].filter(Boolean).join(" ");
+  els.nextButton.disabled = false;
+  els.progressFill.style.width = `${((state.currentIndex + 1) / EXAM_SIZE) * 100}%`;
+}
+
+function renderCurrentQuestion({ resetInteraction = true } = {}) {
   const question = state.exam[state.currentIndex];
   const number = state.currentIndex + 1;
   const typeName = question.reviewSource === "wrong" ? "错题复习" : "单选题";
   const counts = getProgressCounts();
 
-  state.answered = false;
-  state.selectedAnswer = null;
+  if (resetInteraction) {
+    state.answered = false;
+    state.selectedAnswer = null;
+  }
   els.questionCounter.textContent = `第 ${number} / ${EXAM_SIZE} 题`;
   els.scoreValue.textContent = state.score;
   els.questionType.textContent = typeName;
@@ -712,6 +824,19 @@ function renderCurrentQuestion() {
     button.addEventListener("click", () => selectAnswer(option, button));
     els.optionsList.append(button);
   });
+
+  if (state.selectedAnswer !== null) {
+    els.optionsList.querySelectorAll(".option-button").forEach((button) => {
+      button.classList.toggle("selected", normalizeAnswer(button.dataset.value) === normalizeAnswer(state.selectedAnswer));
+    });
+    els.nextButton.disabled = false;
+  }
+
+  if (state.answered && state.selectedAnswer !== null) {
+    const record = findCurrentAnswerRecord();
+    const isCorrect = record ? record.isCorrect : normalizeAnswer(state.selectedAnswer) === normalizeAnswer(question.correctAnswer);
+    applyAnswerFeedback(question, state.selectedAnswer, isCorrect);
+  }
 }
 
 function selectAnswer(selectedAnswer, selectedButton) {
@@ -724,6 +849,7 @@ function selectAnswer(selectedAnswer, selectedButton) {
     button.classList.toggle("selected", button === selectedButton);
   });
   els.nextButton.disabled = false;
+  saveExamSession();
 }
 
 function updateQuestionProgress(question, isCorrect) {
@@ -777,37 +903,20 @@ function evaluateSelectedAnswer() {
   const question = state.exam[state.currentIndex];
   const selectedAnswer = state.selectedAnswer;
   const isCorrect = normalizeAnswer(selectedAnswer) === normalizeAnswer(question.correctAnswer);
-  const buttons = [...els.optionsList.querySelectorAll(".option-button")];
 
   state.answered = true;
   if (isCorrect) {
     state.score += 1;
   }
   const progressMessage = updateQuestionProgress(question, isCorrect);
-
-  buttons.forEach((button) => {
-    button.disabled = true;
-    if (normalizeAnswer(button.dataset.value) === normalizeAnswer(question.correctAnswer)) {
-      button.classList.add("correct");
-    }
-  });
-
-  if (!isCorrect) {
-    const selectedButton = buttons.find((button) => normalizeAnswer(button.dataset.value) === normalizeAnswer(selectedAnswer));
-    selectedButton?.classList.add("wrong");
-  }
+  const counts = getProgressCounts();
 
   els.scoreValue.textContent = state.score;
-  els.feedback.hidden = false;
-  els.feedback.classList.add(isCorrect ? "correct" : "wrong");
-  els.feedback.textContent = [
-    isCorrect ? `回答正确。正确答案：${question.correctAnswer}` : `回答错误。正确答案：${question.correctAnswer}`,
-    progressMessage,
-  ].filter(Boolean).join(" ");
-  els.nextButton.disabled = false;
-  els.progressFill.style.width = `${((state.currentIndex + 1) / EXAM_SIZE) * 100}%`;
+  els.categoryName.textContent = `${question.category} · 错题 ${counts.wrong} · 归档 ${counts.archived}`;
+  applyAnswerFeedback(question, selectedAnswer, isCorrect, progressMessage);
 
   state.answers.push({
+    examIndex: state.currentIndex,
     id: question.id,
     type: question.type,
     category: question.category,
@@ -817,6 +926,7 @@ function evaluateSelectedAnswer() {
     sourceAnswer: question.answer,
     isCorrect,
   });
+  saveExamSession();
 }
 
 function renderResults() {
@@ -824,6 +934,7 @@ function renderResults() {
   const rate = Math.round((state.score / EXAM_SIZE) * 100);
   const counts = getProgressCounts();
 
+  state.completed = true;
   setScreen("result");
   els.questionCounter.textContent = "考试完成";
   els.questionType.textContent = "结果";
@@ -832,6 +943,7 @@ function renderResults() {
   els.resultScore.textContent = `${state.score} / ${EXAM_SIZE}`;
   els.resultRate.textContent = `正确率 ${rate}% · 当前错题库 ${counts.wrong} 题 · 已归档 ${counts.archived} 题`;
   els.mistakesList.innerHTML = "";
+  saveExamSession();
 
   if (mistakes.length === 0) {
     const empty = document.createElement("div");
@@ -857,6 +969,72 @@ function renderResults() {
   });
 }
 
+function getQuestionById(id) {
+  return state.bank.find((question) => question.id === Number(id));
+}
+
+function getLibraryEntries(mode) {
+  const source = mode === "archive" ? state.archive : state.wrongBank;
+  return Object.values(source)
+    .map((entry) => ({ ...entry, question: getQuestionById(entry.id) }))
+    .filter((entry) => entry.question)
+    .sort((a, b) => {
+      const left = a.lastWrongAt || a.archivedAt || a.lastSeenAt || a.addedAt || "";
+      const right = b.lastWrongAt || b.archivedAt || b.lastSeenAt || b.addedAt || "";
+      return right.localeCompare(left);
+    });
+}
+
+function renderLibrary(mode) {
+  const entries = getLibraryEntries(mode);
+  const counts = getProgressCounts();
+
+  els.libraryScreen.dataset.mode = mode;
+  setScreen("library");
+  els.questionCounter.textContent = mode === "archive" ? "归档" : "错题库";
+  els.questionType.textContent = mode === "archive" ? "已掌握" : "待复习";
+  els.categoryName.textContent = `错题 ${counts.wrong} · 归档 ${counts.archived}`;
+  els.progressFill.style.width = `${((state.currentIndex + (state.answered ? 1 : 0)) / EXAM_SIZE) * 100}%`;
+  els.libraryLabel.textContent = "题库菜单";
+  els.libraryTitle.textContent = mode === "archive" ? "归档" : "错题库";
+  els.librarySummary.textContent = mode === "archive"
+    ? `连续答对 3 次的题会进入这里，共 ${entries.length} 题。`
+    : `答错的题会进入这里，再连续答对 3 次后归档，共 ${entries.length} 题。`;
+  els.libraryList.innerHTML = "";
+
+  if (entries.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "empty-state";
+    empty.textContent = mode === "archive" ? "归档里还没有题。" : "错题库里还没有题。";
+    els.libraryList.append(empty);
+    return;
+  }
+
+  entries.forEach((entry, index) => {
+    const item = document.createElement("article");
+    item.className = "library-item";
+    const progressText = mode === "archive" ? "已归档" : `连续答对 ${entry.streak || 0}/3`;
+    item.innerHTML = `
+      <p class="mistake-meta">${index + 1} · ${entry.question.category} · 原题 ${entry.question.id} · ${progressText}</p>
+      <p></p>
+      <p></p>
+    `;
+    item.children[1].textContent = entry.question.stem;
+    item.children[2].textContent = `正确答案：${entry.question.answer}`;
+    els.libraryList.append(item);
+  });
+}
+
+function resumeStudy() {
+  if (state.completed) {
+    renderResults();
+    return;
+  }
+
+  setScreen("quiz");
+  renderCurrentQuestion({ resetInteraction: false });
+}
+
 function nextQuestion() {
   if (!state.answered && state.selectedAnswer !== null) {
     evaluateSelectedAnswer();
@@ -873,18 +1051,23 @@ function nextQuestion() {
   }
 
   state.currentIndex += 1;
+  state.completed = false;
   renderCurrentQuestion();
+  saveExamSession();
 }
 
 function restartExam() {
+  clearExamSession();
   state.exam = createExam();
   state.currentIndex = 0;
   state.score = 0;
   state.answered = false;
   state.selectedAnswer = null;
   state.answers = [];
+  state.completed = false;
   setScreen("quiz");
   renderCurrentQuestion();
+  saveExamSession();
 }
 
 async function init() {
@@ -897,6 +1080,17 @@ async function init() {
     state.bank = (payload.questions || []).filter((question) => question.answer && question.stem);
     state.wrongBank = loadStoredMap(WRONG_BANK_KEY);
     state.archive = loadStoredMap(ARCHIVE_KEY);
+    const savedSession = loadExamSession();
+    if (savedSession) {
+      restoreExamSession(savedSession);
+      if (state.completed) {
+        renderResults();
+      } else {
+        setScreen("quiz");
+        renderCurrentQuestion({ resetInteraction: false });
+      }
+      return;
+    }
     restartExam();
   } catch (error) {
     els.questionCounter.textContent = "题库读取失败";
@@ -910,6 +1104,10 @@ async function init() {
 
 els.nextButton.addEventListener("click", nextQuestion);
 els.restartButton.addEventListener("click", restartExam);
+els.resumeButton.addEventListener("click", resumeStudy);
+els.continueButton.addEventListener("click", resumeStudy);
+els.wrongBankButton.addEventListener("click", () => renderLibrary("wrong"));
+els.archiveButton.addEventListener("click", () => renderLibrary("archive"));
 init();
 
 if ("serviceWorker" in navigator) {
