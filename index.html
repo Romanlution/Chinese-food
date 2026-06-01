@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#f6f1e8" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="中式面点刷题" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <title>中式面点刷题</title>
+    <link rel="manifest" href="manifest.json" />
+    <link rel="apple-touch-icon" href="icons/icon-180.png" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar" aria-live="polite">
+        <div class="topline">
+          <div>
+            <p class="label">中式面点</p>
+            <h1 id="questionCounter">准备题库</h1>
+          </div>
+          <div class="score-box">
+            <span>得分</span>
+            <strong id="scoreValue">0</strong>
+          </div>
+        </div>
+        <div class="meta-row">
+          <span id="questionType">加载中</span>
+          <span id="categoryName">题库导入</span>
+        </div>
+        <div class="progress-track" aria-hidden="true">
+          <div id="progressFill" class="progress-fill"></div>
+        </div>
+      </header>
+
+      <section id="quizScreen" class="screen active">
+        <article class="question-panel">
+          <div class="question-head">
+            <span id="questionBadge" class="badge">模拟考试</span>
+            <span id="questionId" class="question-id"></span>
+          </div>
+          <p id="questionStem" class="question-stem">正在读取题库...</p>
+          <div id="optionsList" class="options-list"></div>
+          <div id="feedback" class="feedback" hidden></div>
+        </article>
+        <button id="nextButton" class="primary-action" type="button" disabled>下一题</button>
+      </section>
+
+      <section id="resultScreen" class="screen result-screen" hidden>
+        <article class="result-summary">
+          <p class="label">本次成绩</p>
+          <h2 id="resultScore">0 / 100</h2>
+          <p id="resultRate">正确率 0%</p>
+        </article>
+        <div class="result-actions">
+          <button id="restartButton" class="primary-action" type="button">重新开始</button>
+        </div>
+        <section class="mistakes-section">
+          <h3>错题回顾</h3>
+          <div id="mistakesList" class="mistakes-list"></div>
+        </section>
+      </section>
+    </main>
+
+    <script src="app.js" defer></script>
+  </body>
+</html>

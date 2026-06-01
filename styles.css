@@ -1,0 +1,376 @@
+:root {
+  color-scheme: light;
+  --bg: #f6f1e8;
+  --surface: #fffaf1;
+  --surface-strong: #ffffff;
+  --text: #22201d;
+  --muted: #6c6257;
+  --line: #dfd2c1;
+  --accent: #9b3d2f;
+  --accent-dark: #6f271f;
+  --ink: #183a3f;
+  --correct: #1d7a4c;
+  --correct-bg: #e7f6ee;
+  --wrong: #b7372f;
+  --wrong-bg: #fdecea;
+  --shadow: 0 16px 40px rgba(51, 38, 24, 0.12);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background:
+    linear-gradient(180deg, rgba(24, 58, 63, 0.08), transparent 240px),
+    var(--bg);
+  color: var(--text);
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB",
+    "Microsoft YaHei", sans-serif;
+  line-height: 1.5;
+}
+
+button {
+  font: inherit;
+}
+
+.app-shell {
+  width: min(100%, 720px);
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: env(safe-area-inset-top) 14px calc(18px + env(safe-area-inset-bottom));
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  margin: 0 -14px 14px;
+  padding: 14px 14px 12px;
+  background: rgba(246, 241, 232, 0.94);
+  border-bottom: 1px solid rgba(223, 210, 193, 0.8);
+  backdrop-filter: blur(14px);
+}
+
+.topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.label {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+h1,
+h2,
+h3,
+p {
+  overflow-wrap: anywhere;
+}
+
+h1 {
+  margin: 2px 0 0;
+  font-size: 22px;
+  line-height: 1.2;
+}
+
+.score-box {
+  min-width: 76px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  text-align: center;
+}
+
+.score-box span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.score-box strong {
+  display: block;
+  margin-top: 2px;
+  color: var(--ink);
+  font-size: 24px;
+  line-height: 1;
+}
+
+.meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.meta-row span,
+.badge,
+.question-id {
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 4px 10px;
+  background: #efe3d2;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.progress-track {
+  height: 6px;
+  margin-top: 12px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #eadcc8;
+}
+
+.progress-fill {
+  width: 0%;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+  transition: width 180ms ease;
+}
+
+.screen {
+  display: none;
+}
+
+.screen.active {
+  display: block;
+}
+
+.question-panel,
+.result-summary,
+.mistake-item {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-strong);
+  box-shadow: var(--shadow);
+}
+
+.question-panel {
+  padding: 18px 16px;
+}
+
+.question-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.badge {
+  background: rgba(155, 61, 47, 0.12);
+  color: var(--accent-dark);
+}
+
+.question-stem {
+  margin: 0;
+  color: var(--text);
+  font-size: 20px;
+  line-height: 1.55;
+}
+
+.options-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.option-button {
+  min-height: 52px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.option-button:disabled {
+  cursor: default;
+}
+
+.option-button .letter {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #e7d7c2;
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.option-button .option-text {
+  min-width: 0;
+  flex: 1;
+}
+
+.option-button.selected {
+  border-color: rgba(155, 61, 47, 0.55);
+  background: #f6e8dd;
+}
+
+.option-button.selected .letter {
+  background: var(--accent);
+  color: #fff;
+}
+
+.option-button.correct {
+  border-color: rgba(29, 122, 76, 0.45);
+  background: var(--correct-bg);
+}
+
+.option-button.correct .letter {
+  background: var(--correct);
+  color: #fff;
+}
+
+.option-button.wrong {
+  border-color: rgba(183, 55, 47, 0.45);
+  background: var(--wrong-bg);
+}
+
+.option-button.wrong .letter {
+  background: var(--wrong);
+  color: #fff;
+}
+
+.feedback {
+  margin-top: 16px;
+  padding: 12px;
+  border-radius: 8px;
+  background: #f3eadc;
+  color: var(--text);
+}
+
+.feedback.correct {
+  background: var(--correct-bg);
+  color: #115736;
+}
+
+.feedback.wrong {
+  background: var(--wrong-bg);
+  color: #87241e;
+}
+
+.primary-action {
+  min-height: 50px;
+  width: 100%;
+  margin-top: 14px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.primary-action:disabled {
+  background: #c9b8a6;
+  color: #fff8ec;
+  cursor: default;
+}
+
+.result-screen {
+  padding-bottom: 20px;
+}
+
+.result-summary {
+  padding: 20px 16px;
+  text-align: center;
+}
+
+.result-summary h2 {
+  margin: 4px 0;
+  color: var(--ink);
+  font-size: 42px;
+  line-height: 1.1;
+}
+
+.result-summary p:last-child {
+  margin: 0;
+  color: var(--muted);
+}
+
+.result-actions {
+  margin-bottom: 20px;
+}
+
+.mistakes-section h3 {
+  margin: 0 0 10px;
+  font-size: 18px;
+}
+
+.mistakes-list {
+  display: grid;
+  gap: 10px;
+}
+
+.mistake-item {
+  padding: 14px;
+  box-shadow: none;
+}
+
+.mistake-item p {
+  margin: 0 0 8px;
+}
+
+.mistake-item p:last-child {
+  margin-bottom: 0;
+}
+
+.mistake-meta {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.empty-state {
+  padding: 18px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--muted);
+  text-align: center;
+}
+
+@media (min-width: 560px) {
+  .app-shell {
+    padding-right: 20px;
+    padding-left: 20px;
+  }
+
+  .topbar {
+    margin-right: -20px;
+    margin-left: -20px;
+    padding-right: 20px;
+    padding-left: 20px;
+  }
+
+  .question-panel {
+    padding: 22px;
+  }
+}
